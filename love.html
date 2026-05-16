@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>heart.PROTOCOL_v2.0</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --red:       #ff2244;
+    --pink:      #ff6688;
+    --deep-red:  #8b0020;
+    --glow-red:  rgba(255, 34, 68, 0.6);
+    --glow-pink: rgba(255, 100, 140, 0.4);
+    --bg:        #050508;
+    --text-dim:  rgba(255,255,255,0.45);
+    --text-mid:  rgba(255,255,255,0.75);
+    --font-mono: 'Courier New', Courier, monospace;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: #fff;
+    font-family: var(--font-mono);
+    cursor: none;         
+  }
+
+  #cursor {
+    position: fixed;
+    width: clamp(14px, 2.5vw, 22px);
+    height: clamp(14px, 2.5vw, 22px);
+    border: 1.5px solid var(--red);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.08s ease, background 0.2s, border-color 0.2s;
+    box-shadow: 0 0 8px var(--glow-red), 0 0 20px var(--glow-red);
+  }
+  #cursor.hovered {
+    background: var(--glow-pink);
+    transform: translate(-50%, -50%) scale(1.8);
+  }
+  #noise {
+    position: fixed; inset: 0; z-index: 1;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+    animation: grainShift 0.4s steps(1) infinite;
+  }
+  @keyframes grainShift {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(-3px, 2px); }
+    50%  { transform: translate(2px, -3px); }
+    75%  { transform: translate(-1px, -2px); }
+    100% { transform: translate(3px, 1px); }
+  }
+  #vignette {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none;
+    background: radial-gradient(ellipse at center,
+      transparent 40%,
+      rgba(5,5,8,0.55) 70%,
+      rgba(5,5,8,0.92) 100%);
+  }
+  #particles {
+    position: fixed; inset: 0; z-index: 3; pointer-events: none;
+    overflow: hidden;
+  }
+  .particle {
+    position: absolute;
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+    opacity: 0;
+    animation: floatUp linear infinite;
+  }
+  @keyframes floatUp {
+    0%   { opacity: 0; transform: translateY(0) scale(0.5); }
+    10%  { opacity: 0.7; }
+    90%  { opacity: 0.3; }
+    100% { opacity: 0; transform: translateY(-100vh) scale(1.2); }
+  }
+  #main-screen {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: clamp(1.5rem, 5vw, 3rem);
+    text-align: center;
+    gap: clamp(0.8rem, 2.5vh, 1.6rem);
+    transition: opacity 0.8s ease;
+  }
+  .sys-label {
+    font-size: clamp(0.55rem, 1.8vw, 0.8rem);
+    color: var(--text-dim);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.3s forwards;
+  }
+  .sys-label span { color: var(--pink); }
+  .headline {
+    font-size: clamp(3rem, 14vw, 9rem);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: #fff;
+    text-shadow:
+      0 0 20px var(--glow-red),
+      0 0 60px var(--glow-red),
+      0 0 120px rgba(255,34,68,0.3);
+    opacity: 0;
+    animation: fadeUp 0.9s ease 0.9s forwards;
+    position: relative;
+  }
+  .headline::before,
+  .headline::after {
+    content: attr(data-text);
+    position: absolute; inset: 0;
+    pointer-events: none;
+  }
+  .headline::before {
+    color: var(--red);
+    animation: glitch1 3.5s infinite steps(1) 2s;
+    clip-path: polygon(0 20%, 100% 20%, 100% 40%, 0 40%);
+  }
+  .headline::after {
+    color: var(--pink);
+    animation: glitch2 3.5s infinite steps(1) 2s;
+    clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%);
+  }
+  @keyframes glitch1 {
+    0%,89%,91%,100% { transform: none; opacity: 0; }
+    90% { transform: translateX(-4px) skewX(-3deg); opacity: 0.7; }
+  }
+  @keyframes glitch2 {
+    0%,87%,89%,100% { transform: none; opacity: 0; }
+    88% { transform: translateX(4px) skewX(2deg); opacity: 0.6; }
+  }
+
+  .subtitle {
+    font-size: clamp(0.7rem, 2.5vw, 1rem);
+    color: var(--text-mid);
+    letter-spacing: 0.08em;
+    opacity: 0;
+    animation: fadeUp 0.9s ease 1.4s forwards;
+  }
+  .subtitle .caret { color: var(--red); }
+
+  #decrypt-btn {
+    margin-top: clamp(0.5rem, 2vh, 1.2rem);
+    padding: clamp(0.75rem, 2.5vw, 1rem) clamp(2rem, 7vw, 3.5rem);
+    font-family: var(--font-mono);
+    font-size: clamp(0.75rem, 2.5vw, 0.95rem);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--red);
+    background: transparent;
+    border: 1.5px solid var(--red);
+    border-radius: 2px;
+    cursor: none;
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeUp 0.9s ease 2s forwards;
+    transition: color 0.3s, box-shadow 0.3s;
+    min-width: clamp(180px, 50vw, 260px);
+    -webkit-tap-highlight-color: transparent;
+  }
+  #decrypt-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--red);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s ease;
+    z-index: -1;
+  }
+  #decrypt-btn:hover::before,
+  #decrypt-btn:active::before { transform: scaleX(1); }
+  #decrypt-btn:hover, #decrypt-btn:active { color: #fff; box-shadow: 0 0 30px var(--glow-red); }
+
+  #decrypt-btn::after {
+    content: '';
+    position: absolute; inset: -6px;
+    border: 1px solid var(--red);
+    border-radius: 2px;
+    opacity: 0;
+    animation: pulseRing 2.5s ease 2.8s infinite;
+  }
+  @keyframes pulseRing {
+    0%   { opacity: 0.5; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.12); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  #heart-screen {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+  #heart-screen.visible { opacity: 1; }
+
+  #heart-container {
+    position: relative;
+    width:  min(90vw, 90vh, 600px);
+    height: min(90vw, 90vh, 600px);
+  }
+
+  .love-word {
+    position: absolute;
+    font-size: clamp(0.45rem, 1.5vw, 0.7rem);
+    font-family: var(--font-mono);
+    color: var(--red);
+    white-space: nowrap;
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    text-shadow: 0 0 8px var(--glow-red), 0 0 20px var(--glow-red);
+    transition: opacity 1.2s ease, left 1.4s cubic-bezier(0.16,1,0.3,1), top 1.4s cubic-bezier(0.16,1,0.3,1);
+    will-change: transform, opacity;
+  }
+  .love-word.placed { opacity: 1; }
+
+  #center-love {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(1.8rem, 6vw, 3.5rem);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.02em;
+    text-shadow:
+      0 0 20px var(--glow-red),
+      0 0 50px var(--glow-red),
+      0 0 100px rgba(255,34,68,0.4);
+    opacity: 0;
+    transition: opacity 1.5s ease 0.3s;
+    pointer-events: none;
+    z-index: 5;
+    white-space: nowrap;
+  }
+  #center-love.visible { opacity: 1; }
+
+  #heart-glow {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(80vw, 80vh);
+    height: min(80vw, 80vh);
+    border-radius: 50%;
+    background: radial-gradient(circle,
+      rgba(255,34,68,0.12) 0%,
+      rgba(255,34,68,0.04) 50%,
+      transparent 70%);
+    opacity: 0;
+    transition: opacity 2s ease;
+    pointer-events: none;
+    z-index: 18;
+    animation: breathe 4s ease-in-out infinite;
+  }
+  #heart-glow.visible { opacity: 1; }
+  @keyframes breathe {
+    0%,100% { transform: translate(-50%,-50%) scale(1); }
+    50%      { transform: translate(-50%,-50%) scale(1.06); }
+  }
+  #scanlines {
+    position: fixed; inset: 0; z-index: 50;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.04) 2px,
+      rgba(0,0,0,0.04) 4px
+    );
+  }
+
+</style>
+</head>
+<body>
+<div id="cursor"></div>
+
+
+<div id="noise"></div>
+
+
+<div id="vignette"></div>
+
+
+<div id="particles"></div>
+
+
+<div id="scanlines"></div>
+
+
+<div id="heart-glow"></div>
+
+
+<section id="main-screen" role="main">
+  <p class="sys-label" aria-label="System initializing">[system] <span>Initializing heart.PROTOCOL_v2.0...</span></p>
+
+  <h1 class="headline" data-text="Love you." aria-label="Love you." style="font-size: 49px;">натисни на кнопку</h1>
+
+  <p class="subtitle"><span class="caret">&gt;</span>&nbsp;і побачиш мій секрет</p>
+
+  <button id="decrypt-btn" aria-label="Decrypt message">
+    
+    [тиць]</button>
+</section>
+
+<section id="heart-screen" aria-label="Encrypted love message revealed" aria-live="polite">
+  <div id="heart-container">
+    <div id="center-love">Love you❤</div>
+  </div>
+</section>
+
+<audio id="bg-music" loop preload="none"></audio>
+
+<script>
+
+const cursor = document.getElementById('cursor');
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top  = e.clientY + 'px';
+});
+document.querySelectorAll('button, a').forEach(el => {
+  el.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+  el.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+});
+
+
+(function spawnParticles() {
+  const container = document.getElementById('particles');
+  const N = window.innerWidth < 500 ? 28 : 55;
+  for (let i = 0; i < N; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 2.5 + 1;
+    p.style.cssText = `
+      left: ${Math.random() * 100}%;
+      bottom: -${Math.random() * 20}%;
+      width: ${size}px;
+      height: ${size}px;
+      animation-duration: ${8 + Math.random() * 12}s;
+      animation-delay: ${Math.random() * 10}s;
+      opacity: 0;
+    `;
+    container.appendChild(p);
+  }
+})();
+
+
+function heartPoints(n) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * Math.PI * 2;
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+    pts.push({ x, y });
+  }
+  return pts;
+}
+
+let audioCtx, gainNode, oscillatorRunning = false;
+
+function startMusic() {
+  const audio = document.getElementById('bg-music');
+  audio.src = 'love.mp3';
+  audio.volume = 0;
+  audio.currentTime = 115;  
+  audio.play();
+
+  let vol = 0;
+  const fade = setInterval(() => {
+    vol = Math.min(vol + 0.01, 0.8);
+    audio.volume = vol;
+    if (vol >= 0.8) clearInterval(fade);
+  }, 80);
+}
+function schedulePulse() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const pulse = audioCtx.createOscillator();
+  const pulseGain = audioCtx.createGain();
+  pulse.type = 'sine';
+  pulse.frequency.setValueAtTime(55, now);
+  pulse.frequency.exponentialRampToValueAtTime(28, now + 0.18);
+  pulseGain.gain.setValueAtTime(0.35, now);
+  pulseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+  pulse.connect(pulseGain);
+  pulseGain.connect(gainNode);
+  pulse.start(now);
+  pulse.stop(now + 0.3);
+  setTimeout(schedulePulse, 900 + Math.random() * 100);
+}
+
+function buildHeart() {
+  const container = document.getElementById('heart-container');
+  const W = container.offsetWidth;
+  const H = container.offsetHeight;
+
+
+  const scale = W / 42;        
+
+  const COUNT = window.innerWidth < 480 ? 160 : 300;
+  const pts = heartPoints(COUNT);
+
+
+  const words = ['love you', 'love you', '❤', 'always', 'forever', 'you & me', '♡'];
+
+  const elements = [];
+
+  pts.forEach((pt, idx) => {
+    const el = document.createElement('div');
+    el.className = 'love-word';
+
+    const word = words[idx % words.length];
+    el.textContent = word;
+
+
+    const startX = Math.random() * 100;   
+    const startY = Math.random() * 100;
+
+    el.style.left = startX + '%';
+    el.style.top  = startY + '%';
+
+
+    const targetX = 50 + (pt.x * scale / W) * 100;
+    const targetY = 50 + (pt.y * scale / H) * 100;
+
+    container.appendChild(el);
+    elements.push({ el, targetX, targetY, delay: 1000 + Math.random() * 4000 });
+  });
+
+
+  const heartScreen = document.getElementById('heart-screen');
+  heartScreen.classList.add('visible');
+  document.getElementById('heart-glow').classList.add('visible');
+
+
+  elements.forEach(({ el, targetX, targetY, delay }) => {
+    setTimeout(() => {
+      el.style.left = targetX + '%';
+      el.style.top  = targetY + '%';
+      el.classList.add('placed');
+    }, delay);
+  });
+
+
+  setTimeout(() => {
+    document.getElementById('center-love').classList.add('visible');
+  }, 2800);
+}
+
+
+document.getElementById('decrypt-btn').addEventListener('click', function() {
+
+  this.disabled = true;
+  this.style.pointerEvents = 'none';
+
+  startMusic();
+
+  const mainScreen = document.getElementById('main-screen');
+  mainScreen.style.opacity = '0';
+
+  setTimeout(() => {
+    mainScreen.style.display = 'none';
+    buildHeart();
+  }, 900);
+});
+
+(function typeEffect() {
+  const label = document.querySelector('.sys-label span');
+  const full = label.textContent;
+  label.textContent = '';
+  let i = 0;
+  const interval = setInterval(() => {
+    label.textContent += full[i++];
+    if (i >= full.length) clearInterval(interval);
+  }, 45);
+})();
+
+let heartBuilt = false;
+const _origBuild = buildHeart;
+window._buildHeart = function() {
+  if (!heartBuilt) { heartBuilt = true; _origBuild(); }
+};
+</script>
+</body>
+</html>
